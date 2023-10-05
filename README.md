@@ -32,4 +32,4 @@ Process Monitoring: Keep an eye on running processes, including their process ID
 
 With 8col, you have an entire toolbox of Linux utilities in your pocket. Whether you're troubleshooting, diagnosing system issues, or performing ethical hacking tasks, 8col is your trusted companion.
 
-This easy-to-use tool is stored on a portable USB drive, ready to assist you whenever you plug it into a Linux system. Use it responsibly and adhere to ethical and legal guidelines in all your activities.
+This easy-to-use tool is stored on a portable USB device of yours, ready to assist you whenever you plug it into a Linux system. Use it responsibly and adhere to ethical and legal guidelines in all your activities.
