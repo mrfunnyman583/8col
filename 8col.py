@@ -10,12 +10,15 @@ from passlib.hash import sha256_crypt  # For password hashing
 
 def get_system_info():
     # Get system information
-    sys_info = {}
-    sys_info['Platform'] = platform.system()
-    sys_info['Hostname'] = socket.gethostname()
-    sys_info['IP Address'] = socket.gethostbyname(socket.gethostname())
-    sys_info['Logged in User'] = getpass.getuser()
-    return sys_info
+    try:
+        sys_info = {}
+        sys_info['Platform'] = platform.system()
+        sys_info['Hostname'] = socket.gethostname()
+        sys_info['IP Address'] = socket.gethostbyname(socket.gethostname())
+        sys_info['Logged in User'] = getpass.getuser()
+        return sys_info
+    except Exception as e:
+        return str(e)
 
 def fetch_external_ip():
     # Fetch external IP address using an API
@@ -59,17 +62,22 @@ def remote_shell(host, username, password, port=22):
         # Close the SSH connection when done
         ssh_client.close()
         return output
-
     except Exception as e:
         return str(e)
 
 def generate_password_hash(password):
     # Function to generate a password hash
-    return sha256_crypt.using(salt_size=16).hash(password)
+    try:
+        return sha256_crypt.using(salt_size=16).hash(password)
+    except Exception as e:
+        return str(e)
 
 def verify_password(password, hashed_password):
     # Function to verify a password against a hash
-    return sha256_crypt.verify(password, hashed_password)
+    try:
+        return sha256_crypt.verify(password, hashed_password)
+    except Exception as e:
+        return str(e)
 
 def add_firewall_rule(port, protocol='tcp'):
     # Function to add a firewall rule using 'ufw'
@@ -77,6 +85,8 @@ def add_firewall_rule(port, protocol='tcp'):
         subprocess.run(['ufw', 'allow', f'{port}/{protocol}'], check=True)
         return f"Firewall rule added for port {port}/{protocol}"
     except subprocess.CalledProcessError as e:
+        return str(e)
+    except Exception as e:
         return str(e)
 
 def list_firewall_rules():
@@ -86,6 +96,8 @@ def list_firewall_rules():
         return result.stdout
     except subprocess.CalledProcessError as e:
         return str(e)
+    except Exception as e:
+        return str(e)
 
 def network_scan(target_ip):
     # Function to perform a network scan using 'nmap'
@@ -94,13 +106,20 @@ def network_scan(target_ip):
         return result.stdout
     except subprocess.CalledProcessError as e:
         return str(e)
+    except Exception as e:
+        return str(e)
 
 def security_audit():
     # Function to perform system security auditing using 'lynis'
     try:
         result = subprocess.run(['lynis', 'audit', 'system'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        return result.stdout
-    except subprocess.CalledProcessError as e:
+        if result.returncode == 0:
+            return result.stdout
+        else:
+            return f"Error running Lynis: {result.stderr}"
+    except FileNotFoundError:
+        return "Lynis not found. Please install Lynis to use this feature."
+    except Exception as e:
         return str(e)
 
 def traceroute(target_ip):
@@ -110,6 +129,8 @@ def traceroute(target_ip):
         return result.stdout
     except subprocess.CalledProcessError as e:
         return str(e)
+    except Exception as e:
+        return str(e)
 
 def ping(target_ip):
     # Function to perform a ping
@@ -117,6 +138,8 @@ def ping(target_ip):
         result = subprocess.run(['ping', '-c', '4', target_ip], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         return result.stdout
     except subprocess.CalledProcessError as e:
+        return str(e)
+    except Exception as e:
         return str(e)
 
 def main():
@@ -141,18 +164,27 @@ def main():
 
         if choice == '1':
             sys_info = get_system_info()
-            for key, value in sys_info.items():
-                print(f"{key}: {value}")
+            if isinstance(sys_info, dict):
+                for key, value in sys_info.items():
+                    print(f"{key}: {value}")
+            else:
+                print(f"Error getting system information: {sys_info}")
 
         elif choice == '2':
             external_ip = fetch_external_ip()
-            print(f"External IP Address: {external_ip}")
+            if isinstance(external_ip, str):
+                print(f"External IP Address: {external_ip}")
+            else:
+                print("Failed to fetch external IP address.")
 
         elif choice == '3':
             directory = input("Enter the directory path: ")
             files = list_files(directory)
-            for file in files:
-                print(file)
+            if isinstance(files, list):
+                for file in files:
+                    print(file)
+            else:
+                print(f"Error listing files: {files}")
 
         elif choice == '4':
             src = input("Enter the source file path: ")
@@ -185,30 +217,48 @@ def main():
             port = input("Enter the port number: ")
             protocol = input("Enter the protocol (default: tcp): ") or 'tcp'
             result = add_firewall_rule(port, protocol)
-            print(result)
+            if isinstance(result, str):
+                print(result)
+            else:
+                print("Error adding firewall rule.")
 
         elif choice == '9':
             firewall_rules = list_firewall_rules()
-            print(firewall_rules)
+            if isinstance(firewall_rules, str):
+                print(f"Error listing firewall rules: {firewall_rules}")
+            else:
+                print(firewall_rules)
 
         elif choice == '10':
             target_ip = input("Enter the target IP address: ")
             scan_result = network_scan(target_ip)
-            print(scan_result)
+            if isinstance(scan_result, str):
+                print(f"Error performing network scan: {scan_result}")
+            else:
+                print(scan_result)
 
         elif choice == '11':
             audit_result = security_audit()
-            print(audit_result)
+            if isinstance(audit_result, str):
+                print(audit_result)
+            else:
+                print("Error performing security audit.")
 
         elif choice == '12':
             target_ip = input("Enter the target IP address: ")
             traceroute_result = traceroute(target_ip)
-            print(traceroute_result)
+            if isinstance(traceroute_result, str):
+                print(f"Error performing traceroute: {traceroute_result}")
+            else:
+                print(traceroute_result)
 
         elif choice == '13':
             target_ip = input("Enter the target IP address: ")
             ping_result = ping(target_ip)
-            print(ping_result)
+            if isinstance(ping_result, str):
+                print(f"Error performing ping: {ping_result}")
+            else:
+                print(ping_result)
 
         elif choice == '0':
             print("Exiting 8col. Goodbye!")
