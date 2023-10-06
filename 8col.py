@@ -4,113 +4,218 @@ import platform
 import subprocess
 import getpass
 import shutil
-import psutil
 import requests
+import paramiko  # For SSH
+from passlib.hash import sha256_crypt  # For password hashing
 
-# Function to fetch IP information using ipinfo.io API
-def fetch_ip_info(ip_address):
+def get_system_info():
+    # Get system information
+    sys_info = {}
+    sys_info['Platform'] = platform.system()
+    sys_info['Hostname'] = socket.gethostname()
+    sys_info['IP Address'] = socket.gethostbyname(socket.gethostname())
+    sys_info['Logged in User'] = getpass.getuser()
+    return sys_info
+
+def fetch_external_ip():
+    # Fetch external IP address using an API
     try:
-        response = requests.get(f"http://ipinfo.io/{ip_address}/json")
-        if response.status_code == 200:
-            ip_info = response.json()
-            return ip_info
-        else:
-            return f"Failed to fetch IP information. Status code: {response.status_code}"
+        response = requests.get('https://ipinfo.io')
+        data = response.json()
+        external_ip = data['ip']
+        return external_ip
     except Exception as e:
         return str(e)
 
-def fetch_ip_address():
+def list_files(directory):
+    # List files in a directory
     try:
-        response = requests.get("https://api.ipify.org?format=json")
-        if response.status_code == 200:
-            ip_info = response.json()
-            return ip_info["ip"]
-        else:
-            return f"Failed to fetch IP address. Status code: {response.status_code}"
+        files = os.listdir(directory)
+        return files
     except Exception as e:
         return str(e)
 
-# Rest of the functions and menu options
-# ...
+def copy_file(src, dest):
+    # Copy a file
+    try:
+        shutil.copy(src, dest)
+        return "File copied successfully."
+    except Exception as e:
+        return str(e)
 
-if __name__ == "__main__":
+def remote_shell(host, username, password, port=22):
+    # Function to establish an SSH connection to a remote host
+    try:
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh_client.connect(host, port=port, username=username, password=password)
+
+        # Now, you can execute commands on the remote host using ssh_client.exec_command()
+
+        # For example, to run 'ls' command remotely:
+        stdin, stdout, stderr = ssh_client.exec_command('ls')
+        output = stdout.read().decode()
+
+        # Close the SSH connection when done
+        ssh_client.close()
+        return output
+
+    except Exception as e:
+        return str(e)
+
+def generate_password_hash(password):
+    # Function to generate a password hash
+    return sha256_crypt.using(salt_size=16).hash(password)
+
+def verify_password(password, hashed_password):
+    # Function to verify a password against a hash
+    return sha256_crypt.verify(password, hashed_password)
+
+def add_firewall_rule(port, protocol='tcp'):
+    # Function to add a firewall rule using 'ufw'
+    try:
+        subprocess.run(['ufw', 'allow', f'{port}/{protocol}'], check=True)
+        return f"Firewall rule added for port {port}/{protocol}"
+    except subprocess.CalledProcessError as e:
+        return str(e)
+
+def list_firewall_rules():
+    # Function to list firewall rules using 'ufw'
+    try:
+        result = subprocess.run(['ufw', 'status', 'verbose'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        return str(e)
+
+def network_scan(target_ip):
+    # Function to perform a network scan using 'nmap'
+    try:
+        result = subprocess.run(['nmap', '-T4', '-F', target_ip], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        return str(e)
+
+def security_audit():
+    # Function to perform system security auditing using 'lynis'
+    try:
+        result = subprocess.run(['lynis', 'audit', 'system'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        return str(e)
+
+def traceroute(target_ip):
+    # Function to perform a traceroute
+    try:
+        result = subprocess.run(['traceroute', target_ip], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        return str(e)
+
+def ping(target_ip):
+    # Function to perform a ping
+    try:
+        result = subprocess.run(['ping', '-c', '4', target_ip], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        return str(e)
+
+def main():
     while True:
-        print("USB Tool Menu:")
-        print("1. Fetch Public IP Address")
-        print("2. Fetch IP Information")
-        print("3. Get System Information")
-        print("4. Execute Custom Command")
-        print("5. List Files in a Directory")
-        print("6. Change Directory")
-        print("7. Create Directory")
-        print("8. Get Logged-In User")
-        print("9. Copy File")
-        print("10. Delete File")
-        print("11. List Running Processes")
-        print("12. Exit")
+        print("\n===== 8col - Linux Utility Tool =====")
+        print("1. Get System Information")
+        print("2. Fetch External IP Address")
+        print("3. List Files in Directory")
+        print("4. Copy a File")
+        print("5. Remote Shell Access")
+        print("6. Generate Password Hash")
+        print("7. Verify Password")
+        print("8. Add Firewall Rule")
+        print("9. List Firewall Rules")
+        print("10. Network Scan")
+        print("11. Security Audit")
+        print("12. Traceroute")
+        print("13. Ping")
+        print("0. Exit")
 
-        choice = input("Enter your choice (1/2/3/4/5/6/7/8/9/10/11/12): ")
+        choice = input("Enter your choice: ")
 
-        if choice == "1":
-            public_ip = fetch_ip_address()
-            if not isinstance(public_ip, str):
-                print(f"Public IP Address: {public_ip}")
-            else:
-                print(public_ip)
-        elif choice == "2":
-            ip_to_lookup = input("Enter the IP address to fetch information: ")
-            ip_info = fetch_ip_info(ip_to_lookup)
-            if not isinstance(ip_info, str):
-                print("IP Information:")
-                for key, value in ip_info.items():
-                    print(f"{key}: {value}")
-            else:
-                print(ip_info)
-        elif choice == "3":
-            system_info = get_system_info()
-            for key, value in system_info.items():
+        if choice == '1':
+            sys_info = get_system_info()
+            for key, value in sys_info.items():
                 print(f"{key}: {value}")
-        elif choice == "4":
-            custom_command = input("Enter the custom command: ")
-            command_result = execute_command(custom_command)
-            print("Command Output:")
-            print(command_result)
-        elif choice == "5":
-            directory_path = input("Enter the directory path: ")
-            files = list_files_in_directory(directory_path)
-            if isinstance(files, list):
-                print("Files in the directory:")
-                for file in files:
-                    print(file)
+
+        elif choice == '2':
+            external_ip = fetch_external_ip()
+            print(f"External IP Address: {external_ip}")
+
+        elif choice == '3':
+            directory = input("Enter the directory path: ")
+            files = list_files(directory)
+            for file in files:
+                print(file)
+
+        elif choice == '4':
+            src = input("Enter the source file path: ")
+            dest = input("Enter the destination directory path: ")
+            result = copy_file(src, dest)
+            print(result)
+
+        elif choice == '5':
+            remote_host = input("Enter the remote host: ")
+            remote_user = input("Enter the remote username: ")
+            remote_pass = input("Enter the remote password: ")
+            remote_output = remote_shell(remote_host, remote_user, remote_pass)
+            print(remote_output)
+
+        elif choice == '6':
+            password = input("Enter a password to hash: ")
+            hashed_password = generate_password_hash(password)
+            print(f"Hashed Password: {hashed_password}")
+
+        elif choice == '7':
+            password_to_check = input("Enter a password to check: ")
+            stored_hashed_password = input("Enter the stored hashed password: ")
+            password_verified = verify_password(password_to_check, stored_hashed_password)
+            if password_verified:
+                print("Password is verified.")
             else:
-                print(f"Error: {files}")
-        elif choice == "6":
-            new_directory = input("Enter the new directory path: ")
-            directory_change_result = change_directory(new_directory)
-            print(directory_change_result)
-        elif choice == "7":
-            new_directory_name = input("Enter the name of the new directory: ")
-            directory_create_result = create_directory(new_directory_name)
-            print(directory_create_result)
-        elif choice == "8":
-            logged_in_user = get_logged_in_user()
-            print(f"Logged-In User: {logged_in_user}")
-        elif choice == "9":
-            source_path = input("Enter the source file path: ")
-            destination_path = input("Enter the destination file path: ")
-            copy_result = copy_file(source_path, destination_path)
-            print(copy_result)
-        elif choice == "10":
-            file_to_delete = input("Enter the file path to delete: ")
-            delete_result = delete_file(file_to_delete)
-            print(delete_result)
-        elif choice == "11":
-            processes = list_running_processes()
-            print("Running Processes:")
-            for process in processes:
-                print(f"PID: {process['PID']}, Name: {process['Name']}, Username: {process['Username']}")
-        elif choice == "12":
-            print("Exiting USB Tool.")
+                print("Password verification failed.")
+
+        elif choice == '8':
+            port = input("Enter the port number: ")
+            protocol = input("Enter the protocol (default: tcp): ") or 'tcp'
+            result = add_firewall_rule(port, protocol)
+            print(result)
+
+        elif choice == '9':
+            firewall_rules = list_firewall_rules()
+            print(firewall_rules)
+
+        elif choice == '10':
+            target_ip = input("Enter the target IP address: ")
+            scan_result = network_scan(target_ip)
+            print(scan_result)
+
+        elif choice == '11':
+            audit_result = security_audit()
+            print(audit_result)
+
+        elif choice == '12':
+            target_ip = input("Enter the target IP address: ")
+            traceroute_result = traceroute(target_ip)
+            print(traceroute_result)
+
+        elif choice == '13':
+            target_ip = input("Enter the target IP address: ")
+            ping_result = ping(target_ip)
+            print(ping_result)
+
+        elif choice == '0':
+            print("Exiting 8col. Goodbye!")
             break
+
         else:
             print("Invalid choice. Please select a valid option.")
+
+if __name__ == "__main__":
+    main()
